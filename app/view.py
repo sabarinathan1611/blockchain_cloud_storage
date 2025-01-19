@@ -3,7 +3,7 @@ from . import db
 from .models import User,Text,File,DeleteAccount,Feedback
 from flask_login import login_required,current_user
 from .sysinfo import *
-from .functions import dict_to_string,string_to_dict,generate_filename
+from .functions import dict_to_string,string_to_dict,generate_filename,send_verification_email
 from .forms import *
 from flask  import current_app as app
 from .TextEncryption import text_encryption,text_decryption
@@ -13,7 +13,7 @@ import os
 from werkzeug.utils import secure_filename
 import threading
 import base64
-from .fileencryption import *
+from .FileEncryption import *
 from .Converter import Converter
 
 aes_cipher = AESCipher()
@@ -101,7 +101,7 @@ def showpass():
     if current_user.is_authenticated:
         passwords = Text.query.filter_by(user_id=current_user.id)
         data = []
-
+        # decryption_ = CryptoKyber()
         for password in passwords:
             decrypted_public_key_path = aes_cipher.decrypt_data(password.public_key_path)  # Assuming it's bytes
             decrypted_private_key_path = aes_cipher.decrypt_data(password.private_key_path)  # Assuming it's bytes
@@ -142,7 +142,7 @@ def fileuplod():
         keypath=app.config['KEY_FOLDER']
         public_key_path=os.path.join(keypath,'public_key',aes_cipher.decrypt_data(current_user.path),generate_filename('der'))
         private_key_path=os.path.join(keypath,'private_key',aes_cipher.decrypt_data(current_user.path),generate_filename('der'))
-        encryption_instance = File_Encryption()
+        encryption_instance = FileEncryption()
         key_pair = encryption_instance.generate_key_pair()
         public_key = key_pair.publickey()
         private_key = key_pair
@@ -182,7 +182,7 @@ def decrypt_file():
         private_key_path = aes_cipher.decrypt_data(file.private_key_path)
 
         # Decrypt the file
-        decryption_instance = File_Decryption()
+        decryption_instance = FileDecryption()
         private_key = decryption_instance.load_key_from_file(private_key_path)
         decrypted_data = decryption_instance.decrypt_file(file_path, private_key)
 

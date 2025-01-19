@@ -85,18 +85,12 @@ def generate_key_pair(public_key_path, private_key_path):
         print("Key pair files already exist.")
 
 def text_encryption(public_key_path, private_key_path, message,salt):
-    # Generate key pair
-    generate_key_pair(public_key_path, private_key_path)
-    # print("Public and private key pair generated successfully.")
 
-    # Initialize RSA instance
     rsa_instance = CryptoRSA(public_key_path, private_key_path)
 
-    # Encrypt the message
+ 
     encrypted_session_key, iv, ciphertext = rsa_instance.encrypt_message(message,salt)
-    # print("Encrypted Key:", encrypted_session_key)
-    # print("IV:", iv)
-    # print("Ciphertext:", ciphertext)
+
     
     return encrypted_session_key, iv, ciphertext
 

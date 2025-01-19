@@ -1,4 +1,0 @@
-cffi==1.16.0
-cryptography==41.0.7
-pycparser==2.21
-pycryptodome==3.19.0

@@ -12,7 +12,9 @@ class Config:
     SESSION_COOKIE_HTTPOLY=True
     SESSION_COOKIE_SECURE = False
     SCHEDULER_API_ENABLED = True
-    SQLALCHEMY_DATABASE_URI=os.environ.get('DATABASE_URI')
+    # SQLALCHEMY_DATABASE_URI=os.environ.get('DATABASE_URI')
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///database.db'  
+    # SQLALCHEMY_DATABASE_URI = 'sqlite:///database.db'  
 
 
     MAIL_SERVER = 'smtp.gmail.com'
@@ -33,7 +35,6 @@ class Config:
 
 class DevelopmentConfig(Config):
     DEBUG = True
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///database.db'  
    
 
 

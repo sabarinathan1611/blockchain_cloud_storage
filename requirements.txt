@@ -9,4 +9,6 @@ flask_cors
 flask_apscheduler
 email_validator
 pycryptodome
-
+python-dotenv
+psycopg2
+psutil
