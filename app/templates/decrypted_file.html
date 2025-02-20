@@ -1,16 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>User Images</title>
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Decrypted Files</title>
+  </head>
+  <body>
     <h2>User Images</h2>
-    {% for file_data in file_data_list %}
-    
-        <img src="data:{{ file_data['mimetype'] }};base64,{{ file_data['decrypted_data_base64'] }}" alt="Decrypted file">
-        <a href="data:{{ file_data['mimetype'] }};base64,{{ file_data['decrypted_data_base64'] }}" download>Download</a>
-    {% endfor %}
-</body>
+
+    {% for file in file_data_list %} {% if 'image' in file.mimetype %}
+    <img
+      src="{{ file.file_path }}"
+      alt="Decrypted file"
+      style="max-width: 300px"
+    />
+    {% else %}
+    <p>Decrypted file <a href="{{ file.file_path }}" download>Download</a></p>
+    {% endif %} {% endfor %}
+  </body>
 </html>

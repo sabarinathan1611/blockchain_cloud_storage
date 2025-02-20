@@ -31,9 +31,16 @@ def create_app(mode='default'):
 
     # Configure the upload folder
     APP_ROOT = os.path.dirname(os.path.abspath(__file__))
-    UPLOAD_FOLDER = os.path.join(APP_ROOT, 'static/uploads/')
+    up_folder=os.path.join('static','uploads')
+    dc_folder=os.path.join('static','Decrypt')
+    UPLOAD_FOLDER = os.path.join(APP_ROOT, up_folder)
+    
+    DECRYPT_FOLDER=os.path.join(APP_ROOT, dc_folder)
     app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-    KEY_FOLDER = os.path.join(app.root_path, 'static/key/')
+    app.config['DECRYPT_FOLDER'] = DECRYPT_FOLDER
+    app.config['STATIC_FOLDER'] = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static')
+    key=os.path.join('static','key')
+    KEY_FOLDER = os.path.join(app.root_path, key)
     app.config['KEY_FOLDER'] = KEY_FOLDER
     print("app.root_path : ",app.root_path)
     # Initialize database
@@ -75,7 +82,7 @@ def create_app(mode='default'):
                 last_active_str = session['last_active']
                 if isinstance(last_active_str, str):  # Ensure it's a string before conversion
                     last_active = datetime.fromisoformat(last_active_str)  # Convert stored string back to datetime
-                    if (now - last_active).seconds > 30:  # 2 minutes
+                    if (now - last_active).seconds > 12000:  # 2 minutes
                         logout_user()
                         flash('You have been logged out due to inactivity.')
                         return redirect(url_for('auth.login'))

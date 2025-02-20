@@ -6,16 +6,12 @@ from .Converter import Converter
 import os
 import  json
 import uuid
-import logging
 from flask  import current_app as app
 from cryptography.fernet import Fernet
 import os
-import threading
 from .dataencryption import AESCipher 
 from . import scheduler
-from datetime import  datetime
 import logging
-from logging.handlers import RotatingFileHandler
 from .DeleteTask import delete_user_files_and_data
 
 #scheduler.add_job(id='minute_task', func=delete_user_files_and_data, trigger='interval', minutes=2)
@@ -89,8 +85,11 @@ def makedir():
 
     print('keypath', private_key_keypath, public_key_keypath)
     uploadfolder = os.path.join(APP_ROOT, f'static/uploads/{uuid_str}')
+    decryptfolder = os.path.join(APP_ROOT, f'static/Decrypt/{uuid_str}')
+    
     try:
-        if not (os.path.exists(private_key_keypath) and os.path.exists(public_key_keypath) and os.path.exists(uploadfolder)):
+        if not (os.path.exists(private_key_keypath) and os.path.exists(public_key_keypath) and os.path.exists(uploadfolder)and os.path.exists(decryptfolder)):
+            os.makedirs(decryptfolder,exist_ok=True)
             os.makedirs(private_key_keypath, exist_ok=True)
             os.makedirs(public_key_keypath, exist_ok=True)
             os.makedirs(uploadfolder, exist_ok=True)

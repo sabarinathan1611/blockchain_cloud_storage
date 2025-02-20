@@ -57,7 +57,7 @@
         </form>
       </section>
       <section class="file">
-<form id="fileform" action="{{ url_for('view.fileuplod') }}" enctype="multipart/form-data" method="post">
+<form id="fileform" action="{{ url_for('view.fileupload') }}" enctype="multipart/form-data" method="post">
   <h3>File</h3>
   {{ fileform.csrf_token }}
   <div id="drop-area" ondragover="handleDragOver(event)" ondragenter="handleDragEnter(event)" ondragleave="handleDragLeave(event)" ondrop="handleDrop(event)">

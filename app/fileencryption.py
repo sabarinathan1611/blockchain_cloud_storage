@@ -1,96 +1,58 @@
 from quantcrypt.kem import Kyber
 from Crypto.Cipher import AES
-from Crypto.Random import get_random_bytes
-
-class CryptoBase:
-    def __init__(self):
+import base64
+class FileCryptoKyber:
+    def __init__(self, public_key_path, private_key_path):
         self.kem = Kyber()
 
-    def generate_key_pair(self, public_key_path, private_key_path):
-        # Generate Kyber key pair
-        public_key, private_key = self.kem.keygen()
+        # Load or generate keys
+        try:
+            with open(public_key_path, 'rb') as f:
+                self.public_key = f.read()
+            with open(private_key_path, 'rb') as f:
+                self.private_key = f.read()
+        except FileNotFoundError:
+            # Generate keys if not found
+            self.public_key, self.private_key = self.kem.keygen()
+            with open(public_key_path, 'wb') as f:
+                f.write(self.public_key)
+            with open(private_key_path, 'wb') as f:
+                f.write(self.private_key)
 
-        # Save keys to specified paths
-        with open(public_key_path, 'wb') as pub_file:
-            pub_file.write(public_key)
-        with open(private_key_path, 'wb') as priv_file:
-            priv_file.write(private_key)
+    def encrypt_file(self, file_data, salt):
+        # Encapsulate shared secret using the public key
+        encrypted_session_key, shared_secret = self.kem.encaps(self.public_key)
 
-    def load_key_from_file(self, filename):
-        with open(filename, 'rb') as file:
-            key = file.read()
-        return key
+        # Add salt to the data
+        data_with_salt = salt + file_data
 
-    def generate_aes_key(self):
-        return get_random_bytes(16)  # 128-bit AES key
+        # Encrypt data using AES with the shared secret
+        cipher_aes = AES.new(shared_secret[:16], AES.MODE_CBC)
+        padded_data = self.pad_data(data_with_salt)
+        ciphertext = cipher_aes.encrypt(padded_data)
 
-class FileEncryption(CryptoBase):
-    def encrypt_file(self, filename, public_key_path):
-        # Load public key from file
-        public_key = self.load_key_from_file(public_key_path)
+        return encrypted_session_key, cipher_aes.iv, ciphertext
 
-        # Generate a random AES key
-        aes_key = self.generate_aes_key()
+    def decrypt_file(self, encrypted_session_key, iv, ciphertext, salt):
+        # Decapsulate shared secret using the private key
+        shared_secret = self.kem.decaps(self.private_key, encrypted_session_key)
 
-        # Encrypt the file using AES
-        aes_cipher = AES.new(aes_key, AES.MODE_EAX)
-        with open(filename, 'rb') as file:
-            data = file.read()
-        encrypted_data, tag = aes_cipher.encrypt_and_digest(data)
+        # Decrypt data using AES
+        cipher_aes = AES.new(shared_secret[:16], AES.MODE_CBC, iv)
+        decrypted_data_with_salt = cipher_aes.decrypt(ciphertext)
 
-        # Encapsulate the AES key with Kyber
-        encapsulated_key, shared_secret = self.kem.encaps(public_key)
+        # Validate and remove salt
+        if decrypted_data_with_salt[:len(salt)] != salt:
+            raise ValueError("Salt verification failed.")
+        return self.unpad_data(decrypted_data_with_salt[len(salt):])
 
-        # Write encapsulated key, AES nonce, tag, and encrypted data to the file
-        with open(filename, 'wb') as file:
-            file.write(encapsulated_key)
-            file.write(aes_cipher.nonce)
-            file.write(tag)
-            file.write(encrypted_data)
+    @staticmethod
+    def pad_data(data):
+        block_size = AES.block_size
+        padding = block_size - (len(data) % block_size)
+        return data + bytes([padding] * padding)
 
-class FileDecryption(CryptoBase):
-    def decrypt_file(self, input_filename, private_key_path):
-        # Load private key from file
-        private_key = self.load_key_from_file(private_key_path)
-
-        # Read encapsulated key, nonce, tag, and encrypted data from the file
-        with open(input_filename, 'rb') as file:
-            encapsulated_key = file.read(800)  # Kyber encapsulated key size
-            nonce = file.read(16)  # AES nonce size
-            tag = file.read(16)   # AES tag size
-            encrypted_data = file.read()
-
-        # Decapsulate the AES key with Kyber
-        shared_secret = self.kem.decaps(private_key, encapsulated_key)
-        aes_key = shared_secret[:16]  # Use the first 16 bytes of the shared secret
-
-        # Decrypt the data using AES
-        aes_cipher = AES.new(aes_key, AES.MODE_EAX, nonce=nonce)
-        decrypted_data = aes_cipher.decrypt_and_verify(encrypted_data, tag)
-
-        # Write the decrypted data back to the file
-        with open(input_filename, 'wb') as file:
-            file.write(decrypted_data)
-
-        return decrypted_data
-
-# Example Usage
-if __name__ == "__main__":
-    filename = "example.txt"  # Replace with your file path
-    public_key_path = "public_key.bin"
-    private_key_path = "private_key.bin"
-
-    # Initialize the encryption/decryption classes
-    encryption = FileEncryption()
-    decryption = FileDecryption()
-
-    # Generate Kyber key pair and save to specified paths
-    encryption.generate_key_pair(public_key_path, private_key_path)
-
-    # Encrypt the file
-    encryption.encrypt_file(filename, public_key_path)
-    print(f"File {filename} encrypted successfully.")
-
-    # Decrypt the file
-    decrypted_data = decryption.decrypt_file(filename, private_key_path)
-    print(f"File {filename} decrypted successfully.")
+    @staticmethod
+    def unpad_data(data):
+        padding = data[-1]
+        return data[:-padding]

@@ -14,9 +14,10 @@ from werkzeug.utils import secure_filename
 import threading
 import base64
 from .FileEncryption import *
+import traceback
 from .Converter import Converter
-
 aes_cipher = AESCipher()
+from base64 import b64decode, b64encode
 
 view = Blueprint('view', __name__)
 
@@ -106,14 +107,8 @@ def showpass():
             decrypted_public_key_path = aes_cipher.decrypt_data(password.public_key_path)  # Assuming it's bytes
             decrypted_private_key_path = aes_cipher.decrypt_data(password.private_key_path)  # Assuming it's bytes
             
-            decrypted_message = text_decryption(
-                public_key_path=decrypted_public_key_path, 
-                private_key_path=decrypted_private_key_path, 
-                encrypted_session_key=password.encrypted_Key, 
-                iv=password.nonce, 
-                ciphertext=password.ciphertext, 
-                salt=session.get('salt')
-            )
+            
+            decrypted_message=text_decryption(encrypted_key=password.encrypted_Key, iv=password.nonce, ciphertext=password.ciphertext, salt=session.get('salt'), public_key_path=decrypted_public_key_path, private_key_path=decrypted_private_key_path)
             
             data.append({
                 "id": password.id,
@@ -126,82 +121,132 @@ def showpass():
         return redirect(url_for('view.home'))
 
 
+# def ensure_keys(public_key_path, private_key_path):
+#     if not os.path.exists(public_key_path) or not os.path.exists(private_key_path):
+#         kyber = FileCryptoKyber(public_key_path, private_key_path)
+#         kyber.generate_keys()
 
 @view.route('/uploadfile', methods=['POST'])
 @login_required
-def fileuplod():
+def fileupload():
     form = FileForm()
     if form.validate_on_submit():
         file = form.file.data
         filename = secure_filename(file.filename)
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], generate_filename('file')+filename)
-        filemimetype=file.mimetype
-        file.save(filepath)
-        print("File:", filename)
-        _, extension = os.path.splitext(filename)
-        keypath=app.config['KEY_FOLDER']
-        public_key_path=os.path.join(keypath,'public_key',aes_cipher.decrypt_data(current_user.path),generate_filename('der'))
-        private_key_path=os.path.join(keypath,'private_key',aes_cipher.decrypt_data(current_user.path),generate_filename('der'))
-        encryption_instance = FileEncryption()
-        key_pair = encryption_instance.generate_key_pair()
-        public_key = key_pair.publickey()
-        private_key = key_pair
-        encryption_instance.save_key_to_file(public_key, public_key_path)
-        encryption_instance.save_key_to_file(private_key, private_key_path)
-        public_key = encryption_instance.load_key_from_file(public_key_path)
-        output=os.path.join(app.config['UPLOAD_FOLDER'], aes_cipher.decrypt_data(current_user.path),generate_filename('file')+extension)
-        print("\n\n\n",output,'\n',type(output),'\n\n')
-        encryption_instance.encrypt_file(filepath, public_key)
+        filemimetype = file.mimetype
 
-        addnew=File(filename=aes_cipher.encrypt_data(filename),filepath=aes_cipher.encrypt_data(output),private_key_path=aes_cipher.encrypt_data(private_key_path),public_key_path=aes_cipher.encrypt_data(public_key_path),user_id=current_user.id,mimetype=aes_cipher.encrypt_data(file.mimetype))
-        db.session.add(addnew)
-        db.session.commit()
-        thread = threading.Thread(target=os.remove, args=(filepath,))
-        thread.start()
-        size=os.path.getsize(output)
-        print("SIZE:",size)
-        print("TYPE OF SIZE",type(size))
+        # File paths and key paths
+        keypath = app.config['KEY_FOLDER']
+        user_folder = aes_cipher.decrypt_data(current_user.path)
+        public_key_path = os.path.join(keypath, 'public_key', user_folder, generate_filename('der'))
+        private_key_path = os.path.join(keypath, 'private_key', user_folder, generate_filename('der'))
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], user_folder, generate_filename('file') + filename)
 
-    return redirect(url_for('view.decrypt_file'))
+        # Save file temporarily
+        try:
+            file.save(filepath)
+        except Exception as e:
+            flash(f"File upload failed: {e}")
+            return redirect(url_for('view.fileupload'))
+
+        # Encrypt file
+        try:
+            with open(filepath, 'rb') as f:
+                file_data = f.read()
+
+            salt = current_user.salt
+            kyber_instance = FileCryptoKyber(public_key_path, private_key_path)
+            encrypted_key, iv, ciphertext = kyber_instance.encrypt_file(file_data, salt)
+
+            # Save encrypted data to a new file
+            encrypted_filepath = filepath 
+            with open(encrypted_filepath, 'wb') as f:
+                f.write(ciphertext)
+
+            # ✅ Fix: Convert all binary fields to bytes before storing
+            addnew = File(
+                filename=b64encode(filename.encode()),  # Convert to bytes
+                filepath=b64encode(encrypted_filepath.encode()),  # Convert to bytes
+                private_key_path=b64encode(private_key_path.encode()),  # Convert to bytes
+                public_key_path=b64encode(public_key_path.encode()),  # Convert to bytes
+                user_id=current_user.id,
+                mimetype=b64encode(filemimetype.encode()),  # Convert to bytes
+                iv=iv,  # Already bytes
+                encrypted_key=encrypted_key  # Already bytes
+            )
+            
+            db.session.add(addnew)
+            db.session.commit()
+
+        except Exception as e:
+            print(traceback.format_exc())
+            flash(f"Encryption failed: {e}")
+            return redirect(url_for('view.fileupload'))
+
+    return redirect(url_for('view.home'))
 
 
 @view.route('/showfile')
 @login_required
 def decrypt_file():
-# Get all files associated with the current user
-    user_files = current_user.files  # Assuming 'files' is the relationship between User and File models
-
-    # Initialize a list to store image data
+    user_files = current_user.files
     file_data_list = []
 
-    # Decrypt and encode each file's data
-    for file in user_files:
-        file_path = aes_cipher.decrypt_data(file.filepath)
+    # Get the absolute path to the static folder
+    static_folder = os.path.abspath(app.config['STATIC_FOLDER'])
+    decrypt_folder = os.path.join(static_folder, 'Decrypt')
 
+    for db_file in user_files:
+        try:
+            # Decode file paths
+            file_path = b64decode(db_file.filepath).decode()
+            private_key_path = b64decode(db_file.private_key_path).decode()
+            public_key_path = b64decode(db_file.public_key_path).decode()
+            encrypted_key = db_file.encrypted_key
+            iv = db_file.iv
+            salt = current_user.salt
 
-        private_key_path = aes_cipher.decrypt_data(file.private_key_path)
+            # Read encrypted file
+            with open(file_path, 'rb') as f:
+                ciphertext = f.read()
 
-        # Decrypt the file
-        decryption_instance = FileDecryption()
-        private_key = decryption_instance.load_key_from_file(private_key_path)
-        decrypted_data = decryption_instance.decrypt_file(file_path, private_key)
+            # Decrypt the file
+            kyber_instance = FileCryptoKyber(public_key_path, private_key_path)
+            decrypted_data = kyber_instance.decrypt_file(encrypted_key, iv, ciphertext, salt)
 
-        # Base64 encode the decrypted file data
-        decrypted_data_base64 = base64.b64encode(decrypted_data).decode('utf-8')
+            # Create user-specific decrypt folder
+            user_folder = aes_cipher.decrypt_data(current_user.path)
+            user_decrypt_path = os.path.join(decrypt_folder, user_folder)
+            os.makedirs(user_decrypt_path, exist_ok=True)
 
-        mimetype = aes_cipher.decrypt_data(file.mimetype)
+            # Create decrypted file path
+            decrypted_filename = secure_filename(os.path.basename(file_path))
+            decrypted_filepath = os.path.join(user_decrypt_path, decrypted_filename)
+            
+            # Save decrypted file
+            with open(decrypted_filepath, 'wb') as f:
+                f.write(decrypted_data)
+            
+            # Update database status
+            db_file.status = "Decrypted"
+            db.session.commit()
 
-        # Append the file data to the list
-        file_data_list.append({
-            'decrypted_data_base64': decrypted_data_base64,
-            'mimetype': mimetype
-        })
+            # Generate URL - create path relative to static folder
+            relative_path = os.path.relpath(decrypted_filepath, static_folder)
+            relative_path = relative_path.replace('\\', '/')  # Convert Windows paths to URL format
+            
+            # Store file info for display
+            file_data_list.append({
+                'file_path': url_for('static', filename=relative_path),
+                'mimetype': b64decode(db_file.mimetype).decode()
+            })
 
+        except Exception as e:
+            print(traceback.format_exc())
+            flash(f"Decryption failed: {str(e)}", 'error')
+            continue
 
-    # Pass the list of file data to the template
     return render_template('decrypted_file.html', file_data_list=file_data_list)
-
-
 
 
 @view.route('/profile', methods=['POST'])

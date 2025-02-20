@@ -12,6 +12,7 @@ from .dataencryption import AESCipher
 import secrets
 from .Log import Log as log
 from datetime import timedelta,datetime
+from secrets import token_bytes
 
 
 auth = Blueprint('auth', __name__)
@@ -31,21 +32,16 @@ def login():
         # print("encrypted_email:",encrypted_email)
         user = User.query.filter_by(email=encrypted_email).first()
 
-        encrypted_password=aes_cipher.encrypt_data(password)
-        session['salt']=encrypted_password+string_to_hex(password)
-        print("type",type(session.get('salt')))
+        
+       
 
-        print("\n ----------------------------\n")
-        print("Password :",encrypted_password)
-        # print("Type :",len (encrypted_password))
-        print("Salt: ",session.get('salt'))
-        print("Len of Salt: ",len(session.get('salt')))
-
-        print("\n ----------------------------\n")
+ 
 
         if user and check_password_hash(user.password, password):
             session['last_active'] = datetime.now()
             login_user(user, remember=True)
+            session['salt']=current_user.salt
+            
             # log.writeLog("Login",user.id)
             return redirect(url_for('view.home'))
         else:
