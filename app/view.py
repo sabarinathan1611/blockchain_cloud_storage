@@ -230,7 +230,8 @@ def decrypt_file():
             # Update database status
             db_file.status = "Decrypted"
             db.session.commit()
-
+            filee=b64decode(db_file.filename).decode()
+            print("filee ",filee)
             # Generate URL - create path relative to static folder
             relative_path = os.path.relpath(decrypted_filepath, static_folder)
             relative_path = relative_path.replace('\\', '/')  # Convert Windows paths to URL format
@@ -238,6 +239,7 @@ def decrypt_file():
             # Store file info for display
             file_data_list.append({
                 'file_path': url_for('static', filename=relative_path),
+                "filename":filee,
                 'mimetype': b64decode(db_file.mimetype).decode()
             })
 

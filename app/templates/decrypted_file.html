@@ -1,20 +1,245 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <title>Decrypted Files</title>
-  </head>
-  <body>
-    <h2>User Images</h2>
+{% extends "base.html" %} {% block title %} Admin {% endblock %} {% block
+content %}
+<link rel="stylesheet" href="static/css/nav.css" />
 
-    {% for file in file_data_list %} {% if 'image' in file.mimetype %}
-    <img
-      src="{{ file.file_path }}"
-      alt="Decrypted file"
-      style="max-width: 300px"
-    />
+<style>
+  body {
+      background-color: #121212;
+      color: #d4edda;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+  }
+  h2 {
+      color: #98fb98;
+      text-align: center;
+  }
+  .file-container {
+      display: grid;
+      gap: 30px;
+      padding: 30px;
+      justify-items: center;
+  }
+  {% raw %}
+  /* Dynamic grid adjustments */
+  {% if file_data_list|length == 1 %}
+      .file-container { grid-template-columns: 1fr; }
+      .file-box { width: 90vw; height: 90vh; }
+  {% elif file_data_list|length == 2 %}
+      .file-container { grid-template-columns: repeat(2, 1fr); }
+      .file-box { width: 45vw; height: 70vh; }
+  {% elif file_data_list|length == 3 %}
+      .file-container { grid-template-columns: repeat(3, 1fr); }
+      .file-box { width: 30vw; height: 50vh; }
+  {% else %}
+      .file-container { grid-template-columns: repeat(3, 1fr); }
+      .file-box { width: 30vw; height: 50vh; }
+      .file-container > :nth-child(n+4) {
+          grid-column: span 2;
+          width: 60vw;
+          height: 50vh;
+      }
+  {% endif %}
+  {% endraw %}
+
+  .file-box {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px;
+      border: 2px solid #98fb98;
+      border-radius: 15px;
+      background: #1c1c1c;
+      text-align: center;
+  }
+  .file-box img {
+      max-width: 100%;
+      border-radius: 15px;
+  }
+  .file-icon {
+      font-size: 70px;
+      color: #98fb98;
+  }
+  .file-name {
+      font-size: 18px;
+      font-weight: bold;
+      color: #ffffff;
+      margin-top: 10px;
+      font-family: 'Poppins', sans-serif;
+      text-transform: capitalize;
+      word-wrap: break-word;
+      max-width: 90%;
+      text-align: center;
+  }
+  .open-link {
+      position: absolute;
+      bottom: 15px;
+      background: #98fb98;
+      color: #121212;
+      text-align: center;
+      padding: 10px;
+      border-radius: 5px;
+      text-decoration: none;
+      font-weight: bold;
+      width: 85%;
+      opacity: 0;
+      transition: opacity 0.3s ease-in-out;
+  }
+  .options-button {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      width: 35px;
+      height: 35px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      cursor: pointer;
+      background: transparent;
+      border: none;
+      color: #98fb98;
+  }
+  .file-box:hover .open-link {
+      opacity: 1;
+  }
+  .options-menu {
+      display: none;
+      position: absolute;
+      top: 45px;
+      right: 10px;
+      background: #1c1c1c;
+      border: 1px solid #98fb98;
+      border-radius: 5px;
+      padding: 5px;
+  }
+  .options-menu a {
+      display: block;
+      padding: 8px 12px;
+      color: #98fb98;
+      text-decoration: none;
+  }
+  .options-menu a:hover {
+      background: #98fb98;
+      color: #121212;
+  }
+</style>
+
+<script>
+  function toggleOptionsMenu(event, id) {
+    event.stopPropagation();
+    let menu = document.getElementById(id);
+    menu.style.display = menu.style.display === "block" ? "none" : "block";
+  }
+  function closeMenus() {
+    document
+      .querySelectorAll(".options-menu")
+      .forEach((menu) => (menu.style.display = "none"));
+  }
+  document.addEventListener("click", closeMenus);
+</script>
+<nav>
+  <ul class="sidebar">
+    <li onclick="hideSidebar()">
+      <a href="/"
+        ><svg
+          xmlns="http://www.w3.org/2000/svg"
+          height="24"
+          viewBox="0 -960 960 960"
+          width="24"
+        >
+          <path
+            d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"
+          /></svg
+      ></a>
+    </li>
+    <li><a href="{{url_for('view.showpass')}}">Password</a></li>
+    <li><a href="{{url_for('view.decrypt_file')}}">File</a></li>
+    <li><a href="{{url_for('view.profile')}}">Profile</a></li>
+    <li><a href="{{url_for('view.about')}}">About</a></li>
+    {%if current_user.admin == True%}
+    <li><a href="{{'view.admin'}}">Admin</a></li>
+    {%endif%}
+    <li><a href="{{url_for('auth.logout')}}">Logout</a></li>
+  </ul>
+  <ul>
+    <li><a href="/">Net Turst</a></li>
+    <li class="hideOnMobile">
+      <a href="{{url_for('view.showpass')}}">Password</a>
+    </li>
+    <li class="hideOnMobile">
+      <a href="{{url_for('view.decrypt_file')}}">File</a>
+    </li>
+    <li class="hideOnMobile">
+      <a href="{{url_for('view.profile')}}">Profile</a>
+    </li>
+    <li class="hideOnMobile"><a href="{{url_for('view.about')}}">About</a></li>
+    <li class="hideOnMobile"><a href="{{url_for('view.admin')}}">Admin</a></li>
+    <li class="hideOnMobile">
+      <a href="{{url_for('auth.logout')}}">Logout</a>
+    </li>
+    <li class="menu-button" onclick="showSidebar()">
+      <a href="#"
+        ><svg
+          xmlns="http://www.w3.org/2000/svg"
+          height="24"
+          viewBox="0 -960 960 960"
+          width="24"
+        >
+          <path
+            d="M120-240v-80h720v80H120Zm0-200v-80h720v80H120Zm0-200v-80h720v80H120Z"
+          /></svg
+      ></a>
+    </li>
+  </ul>
+</nav>
+
+<h2>User Files</h2>
+
+<div class="file-container">
+  {% for file in file_data_list %}
+  <div class="file-box">
+    {% if 'image' in file.mimetype %}
+    <img src="{{ file.file_path }}" alt="Decrypted file" />
+    {% else %} {% if file.file_path.endswith('.pdf') %}
+    <i class="file-icon fas fa-file-pdf"></i>
+    {% elif file.file_path.endswith('.docx') or file.file_path.endswith('.doc')
+    %}
+    <i class="file-icon fas fa-file-word"></i>
+    {% elif file.file_path.endswith('.xlsx') or file.file_path.endswith('.xls')
+    %}
+    <i class="file-icon fas fa-file-excel"></i>
+    {% elif file.file_path.endswith('.pptx') or file.file_path.endswith('.ppt')
+    %}
+    <i class="file-icon fas fa-file-powerpoint"></i>
+    {% elif file.file_path.endswith('.mp4') or file.file_path.endswith('.avi')
+    or file.file_path.endswith('.mov') %}
+    <i class="file-icon fas fa-file-video"></i>
+    {% elif file.file_path.endswith('.mp3') or file.file_path.endswith('.wav')
+    %}
+    <i class="file-icon fas fa-file-audio"></i>
+    {% elif file.file_path.endswith('.zip') or file.file_path.endswith('.rar')
+    %}
+    <i class="file-icon fas fa-file-archive"></i>
+    {% elif file.file_path.endswith('.txt') %}
+    <i class="file-icon fas fa-file-alt"></i>
     {% else %}
-    <p>Decrypted file <a href="{{ file.file_path }}" download>Download</a></p>
-    {% endif %} {% endfor %}
-  </body>
-</html>
+    <i class="file-icon fas fa-file"></i>
+    {% endif %}
+    <div class="file-name">{{ file.filename }}</div>
+    {% endif %}
+    <a href="{{ file.file_path }}" class="open-link" target="_blank">Open</a>
+    <button
+      class="options-button"
+      onclick="toggleOptionsMenu(event, 'menu-{{ loop.index }}')"
+    >
+      ⋮
+    </button>
+    <div class="options-menu" id="menu-{{ loop.index }}">
+      <a href="{{ file.file_path }}" download>Download</a>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

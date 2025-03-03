@@ -24,7 +24,7 @@ class Config:
     print("MAIL_USERNAME :",MAIL_USERNAME)
     MAIL_PASSWORD = os.environ.get('GMAIL_PASSWORD')  # Use a custom environment variable for Gmail app-specific password
     print("MAIL_PASSWORD:",MAIL_PASSWORD)
-    AdminMail=os.environ.get('ADMINMAIL')
+    AdminMail=os.environ.get('ADMINMAIL',"vsabarinathan1611@gmail.com")
     print("AdminMail:",AdminMail)
     data_key = os.environ.get('KEY').encode() if os.environ.get('KEY') else None
     print("data_key:",data_key)

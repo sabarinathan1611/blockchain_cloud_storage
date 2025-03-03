@@ -1,101 +1,141 @@
-{% extends "base.html" %}
-{% block title %} Admin {% endblock %}
-{% block content %}
-   <div class="container mt-5">
-        <h1 class="mb-4">Admin Dashboard</h1>
+{% extends "base.html" %} {% block title %} Admin {% endblock %} {% block
+content %}
+<link rel="stylesheet" href="static/css/nav.css" />
 
-        {% if storage_info %}
-            <div class="mb-4">
-                <h2>Storage Information</h2>
-                <table class="table table-bordered">
-                    <thead>
-                        <tr>
-                            <th>Mount Point</th>
-                            <th>Total</th>
-                            <th>Used</th>
-                            <th>Free</th>
-                            <th>Percentage Used</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for info in storage_info %}
-                            <tr>
-                                <td>{{ info['Mount Point'] }}</td>
-                                <td>{{ info['Total'] }}</td>
-                                <td>{{ info['Used'] }}</td>
-                                <td>{{ info['Free'] }}</td>
-                                <td>{{ info['Percentage Used'] }}%</td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        {% endif %}
+<nav>
+  <ul class="sidebar">
+    <li onclick="hideSidebar()">
+      <a href="/"
+        ><svg
+          xmlns="http://www.w3.org/2000/svg"
+          height="24"
+          viewBox="0 -960 960 960"
+          width="24"
+        >
+          <path
+            d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"
+          /></svg
+      ></a>
+    </li>
+    <li><a href="{{url_for('view.showpass')}}">Password</a></li>
+    <li><a href="{{url_for('view.decrypt_file')}}">File</a></li>
+    <li><a href="{{url_for('view.profile')}}">Profile</a></li>
+    <li><a href="{{url_for('view.about')}}">About</a></li>
+    {%if current_user.admin == True%}
+    <li><a href="{{'view.admin'}}">Admin</a></li>
+    {%endif%}
+    <li><a href="{{url_for('auth.logout')}}">Logout</a></li>
+  </ul>
+  <ul>
+    <li><a href="/">Net Turst</a></li>
+    <li class="hideOnMobile">
+      <a href="{{url_for('view.showpass')}}">Password</a>
+    </li>
+    <li class="hideOnMobile">
+      <a href="{{url_for('view.decrypt_file')}}">File</a>
+    </li>
+    <li class="hideOnMobile">
+      <a href="{{url_for('view.profile')}}">Profile</a>
+    </li>
+    <li class="hideOnMobile"><a href="{{url_for('view.about')}}">About</a></li>
+    <li class="hideOnMobile"><a href="{{url_for('view.admin')}}">Admin</a></li>
+    <li class="hideOnMobile">
+      <a href="{{url_for('auth.logout')}}">Logout</a>
+    </li>
+    <li class="menu-button" onclick="showSidebar()">
+      <a href="#"
+        ><svg
+          xmlns="http://www.w3.org/2000/svg"
+          height="24"
+          viewBox="0 -960 960 960"
+          width="24"
+        >
+          <path
+            d="M120-240v-80h720v80H120Zm0-200v-80h720v80H120Zm0-200v-80h720v80H120Z"
+          /></svg
+      ></a>
+    </li>
+  </ul>
+</nav>
 
-        {% if system_info %}
-            <div>
-                <h2>System Information</h2>
-                <div class="card">
-                    <div class="card-body">
-                        <ul class="list-group list-group-flush">
-                            {% for key, value in system_info.items() %}
-                                <li class="list-group-item"><strong>{{ key }}:</strong> {{ value }}</li>
-                            {% endfor %}
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        {% endif %}
+<div class="container mt-5">
+  <h1 class="mb-4">Admin Dashboard</h1>
+
+  {% if storage_info %}
+  <div class="mb-4">
+    <h2>Storage Information</h2>
+    <table class="table table-bordered">
+      <thead>
+        <tr>
+          <th>Mount Point</th>
+          <th>Total</th>
+          <th>Used</th>
+          <th>Free</th>
+          <th>Percentage Used</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for info in storage_info %}
+        <tr>
+          <td>{{ info['Mount Point'] }}</td>
+          <td>{{ info['Total'] }}</td>
+          <td>{{ info['Used'] }}</td>
+          <td>{{ info['Free'] }}</td>
+          <td>{{ info['Percentage Used'] }}%</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %} {% if system_info %}
+  <div>
+    <h2>System Information</h2>
+    <div class="card">
+      <div class="card-body">
+        <ul class="list-group list-group-flush">
+          {% for key, value in system_info.items() %}
+          <li class="list-group-item">
+            <strong>{{ key }}:</strong> {{ value }}
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
     </div>
-<table class="table table-dark table-striped" style="width: 500px;">
+  </div>
+  {% endif %}
+</div>
+<table class="table table-dark table-striped" style="width: 500px">
   <tr>
     <th>id</th>
     <th>Role</th>
     <th>Used Storage</th>
-   
-
-   
   </tr>
   {% for user in user %}
 
   <tr>
     <td>{{user.id}}</td>
-      <td>{{user.role}}</td>
-      <td>{{user.used_storage}}</td>
-
-   
-
-  
-   
-  
+    <td>{{user.role}}</td>
+    <td>{{user.used_storage}}</td>
   </tr>
 
   {%endfor%}
 </table>
 
-<br>
-<table class="table table-dark table-striped" style="width: 500px;">
+<br />
+<table class="table table-dark table-striped" style="width: 500px">
   <tr>
     <th>Name</th>
     <th>Email</th>
     <th>Feedback</th>
     <th>Fixed</th>
-   
-
-   
   </tr>
   {% for feedbacks in feedback %}
 
   <tr>
     <td>{{feedbacks.name}}</td>
-      <td>{{feedbacks.email}}</td>
-      <td>{{feedbacks.text}}</td>
-      <td>{{feedbacks.fixed}}</td>
-   
-
-  
-   
-  
+    <td>{{feedbacks.email}}</td>
+    <td>{{feedbacks.text}}</td>
+    <td>{{feedbacks.fixed}}</td>
   </tr>
 
   {%endfor%}

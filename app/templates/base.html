@@ -1,15 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
   <head>
+    <link rel="stylesheet" href="/app/static/css/nav.css" />
+
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <title>{% block title%}{%endblock%}</title>
     {%block link%} {%endblock%}
- <!--    <link
+    <link
       rel="stylesheet"
       href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"
-    /> -->
+    />
 
     <!-- Add Font Awesome CSS link -->
     <link
@@ -34,7 +36,6 @@
               class="fas fa-window-close"
               data-bs-dismiss="alert"
               aria-label="Close"
-              
             ></button>
           </div>
           {% endfor %}
@@ -42,41 +43,12 @@
       </div>
       {% endif %} {% endwith %}
     </header>
-    {% if current_user.is_authenticated %}
-        <nav>
-      <ul class="sidebar">
-        <li onclick="hideSidebar()" ><a href="#"><svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24"><path d="m256-200-56-56 224-224-224-224 56-56 224 224 224-224 56 56-224 224 224 224-56 56-224-224-224 224Z"/></svg></a></li>
-        <li><a href="{{url_for('view.showpass')}}">Password</a></li>
-        <li><a href="{{url_for('view.decrypt_file')}}">File</a></li>
-        <li><a href="{{url_for('view.profile')}}">Profile</a></li>
-        <li><a href="{{url_for('view.about')}}">About</a></li>
-        {%if current_user.admin == True%}
-        <li><a href="{{'view.admin'}}">Admin</a></li>
-        {%endif%}
-        <li><a href="{{url_for('auth.logout')}}">Logout</a></li>
-      </ul>
-      <ul>
-        <li><a href="#">Net Turst</a></li>
-        <li class="hideOnMobile"><a href="{{url_for('view.showpass')}}">Password</a></li>
-        <li class="hideOnMobile"><a href="{{url_for('view.decrypt_file')}}">File</a></li>
-        <li class="hideOnMobile"><a href="{{url_for('view.profile')}}">Profile</a></li>
-        <li class="hideOnMobile"><a href="{{url_for('view.about')}}">About</a></li>
-        <li class="hideOnMobile"><a href="{{url_for('view.admin')}}">Admin</a></li>
-        <li class="hideOnMobile"><a href="{{url_for('auth.logout')}}">Logout</a></li>
-        <li class="menu-button" onclick="showSidebar()" ><a href="#"><svg xmlns="http://www.w3.org/2000/svg" height="24" viewBox="0 -960 960 960" width="24"><path d="M120-240v-80h720v80H120Zm0-200v-80h720v80H120Zm0-200v-80h720v80H120Z"/></svg></a></li>
+    {% if current_user.is_authenticated %} {% endif %} {%block
+    content%}{%endblock%}
 
-      </ul>
-    </nav>
-    {% endif %}
-
-    {%block content%}{%endblock%}
-
-    
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.1/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <!-- Add jQuery from a CDN -->
-<script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
-
- 
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
   </body>
 </html>
