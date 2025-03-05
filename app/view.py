@@ -2,20 +2,23 @@ from flask import Blueprint, render_template, request, flash, redirect, url_for,
 from . import db
 from .models import User,Text,File,DeleteAccount,Feedback
 from flask_login import login_required,current_user
-from .sysinfo import *
-from .functions import dict_to_string,string_to_dict,generate_filename,send_verification_email
-from .forms import *
+from .utils.sysinfo import *
+from .utils.forms import *
+from .utils.encryption import dict_to_string, string_to_dict
+from .utils.file_utils import generate_filename
+from .utils.email_utils import send_verification_email
 from flask  import current_app as app
-from .TextEncryption import text_encryption,text_decryption
-from .dataencryption import *
-from .config import Config
+from .utils.Encryption.TextEncryption import text_encryption,text_decryption
+from .utils.Encryption.dataencryption import AESCipher 
+
+# from .utils.config import Config
 import os
 from werkzeug.utils import secure_filename
 import threading
 import base64
-from .FileEncryption import *
+from .utils.Encryption.FileEncryption import *
 import traceback
-from .Converter import Converter
+from .utils.Converter import Converter
 aes_cipher = AESCipher()
 from base64 import b64decode, b64encode
 

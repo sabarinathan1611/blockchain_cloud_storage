@@ -1,7 +1,7 @@
 import psycopg2
 import os
 import shutil
-from .dataencryption import AESCipher as aes_cipher
+from Encryption.dataencryption import AESCipher as aes_cipher
 
 def delete_user_files_and_data():
     # PostgreSQL connection string

@@ -3,7 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager,current_user,logout_user
 from flask_wtf.csrf import CSRFProtect
 from flask_mail import Mail
-from .config import get_config
+from .utils.config import get_config
 import os
 from flask_cors import CORS
 from logging.handlers import RotatingFileHandler

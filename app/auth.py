@@ -4,15 +4,16 @@ from flask_login import login_required, login_user, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from . import db, mail
 from .models import User
-from .forms import LoginForm, SignUpForm,EmailForm,ChangePassForm
-from .functions import send_verification_email,makedir,string_to_hex
-from .config import Config 
-from flask_cors import cross_origin
-from .dataencryption import AESCipher 
+from .utils.forms import LoginForm, SignUpForm,EmailForm,ChangePassForm
+from .utils.email_utils import send_verification_email
+from .utils.file_utils import makedir
+from .utils.encryption import string_to_hex
+from .utils.config import Config 
+from .utils.Encryption.dataencryption import AESCipher 
 import secrets
-from .Log import Log as log
+
 from datetime import timedelta,datetime
-from secrets import token_bytes
+
 
 
 auth = Blueprint('auth', __name__)
