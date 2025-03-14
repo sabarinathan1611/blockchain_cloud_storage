@@ -5,10 +5,16 @@ import json
 import requests
 from pymongo import MongoClient
 import sys
+from dotenv import load_dotenv
+import os
 
 app = Flask(__name__)
 
 PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 5051
+load_dotenv()
+OTHER_SERVERS = os.getenv("OTHER_SERVERS", "").split(",")
+OTHER_SERVERS = [server.strip() for server in OTHER_SERVERS if server.strip()]
+
 
 # MongoDB setup
 client = MongoClient("mongodb://localhost:27017/")
@@ -77,7 +83,6 @@ class Blockchain:
         return True
 
     def broadcast_new_block(self, block):
-        OTHER_SERVERS = ["http://127.0.0.1:5051", "http://127.0.0.1:5052", "http://127.0.0.1:5053"]
         OTHER_SERVERS = [url for url in OTHER_SERVERS if not url.endswith(str(PORT))]
 
         for server in OTHER_SERVERS:
@@ -129,7 +134,6 @@ def delete_block(index):
 
 @app.route('/sync_chain', methods=['GET'])
 def sync_chain():
-    OTHER_SERVERS = ["http://127.0.0.1:5051", "http://127.0.0.1:5052", "http://127.0.0.1:5053"]
     OTHER_SERVERS = [url for url in OTHER_SERVERS if not url.endswith(str(PORT))]
 
     longest_chain = []
