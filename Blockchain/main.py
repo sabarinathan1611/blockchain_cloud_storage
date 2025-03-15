@@ -2,126 +2,117 @@ from flask import Flask, jsonify, request
 import requests
 import random
 import os
+from pymongo import MongoClient
 from dotenv import load_dotenv
+import jwt
 
 app = Flask(__name__)
 load_dotenv()
 
+JWT_SECRET = os.getenv('JWT_SECRET')
+DB_URI = os.getenv('DB_URI')
 
-# Fetch nodes from .env file and convert to a list
-OTHER_SERVERS = os.getenv("OTHER_SERVERS", "").split(",")
+client = MongoClient(DB_URI)
+nodes_collection = client["general"].nodes
 
-# Remove empty entries (if .env is misconfigured)
-NODES = [server.strip() for server in OTHER_SERVERS if server.strip()]
+# Fetch nodes dynamically from MongoDB
+def get_nodes():
+    nodes = nodes_collection.find({})
+    return [f"http://{node['host']}:{node['port']}" for node in nodes]
 
- 
+# Generate JWT Token
+def get_token():
+    return jwt.encode({"iss": "main.py"}, JWT_SECRET, algorithm='HS256')
+
+headers = {"Authorization": get_token()}
+
+# Check if nodes are active
+def check_active_nodes():
+    active_nodes = []
+    for node in get_nodes():
+        try:
+            res = requests.get(f"{node}/get_chain", headers=headers, verify=False, timeout=3)
+            if res.ok:
+                active_nodes.append(node)
+        except requests.RequestException as e:
+            print(f"Failed to connect to {node}: {e}")
+            continue
+    return active_nodes
 
 @app.route('/add_block', methods=['POST'])
 def add_block():
-    node = random.choice(NODES)
-    try:
-        res = requests.post(f"{node}/add_block", json=request.json)
-        return jsonify(res.json()), res.status_code
-    except requests.RequestException as e:
-        return jsonify({"error": "Node unreachable or error", "details": str(e)}), 503
+    nodes = check_active_nodes()
+    random.shuffle(nodes)
+    for node in nodes:
+        try:
+            res = requests.post(f"{node}/add_block", json=request.json, headers=headers, verify=False)
+            if res.ok:
+                return jsonify(res.json()), res.status_code
+        except requests.RequestException as e:
+            print(f"Error contacting node {node}: {e}")
+            continue
+    return jsonify({"error": "All nodes unreachable"}), 503
 
 @app.route('/get_chain', methods=['GET'])
 def get_chain():
-    chains = []
-    unique_hashes = set()
-
-    for node in NODES:
+    chains, unique_hashes = [], set()
+    for node in check_active_nodes():
         try:
-            res = requests.get(f"{node}/get_chain").json()
+            res = requests.get(f"{node}/get_chain", headers=headers, verify=False).json()
             for block in res['chain']:
-                if block['hash'] not in unique_hashes and block['index'] != 0:  # Filter Genesis Block
+                if block['hash'] not in unique_hashes and block['index'] != 0:
                     unique_hashes.add(block['hash'])
                     chains.append(block)
         except:
             continue
-
     chains.sort(key=lambda x: x['index'])
     return jsonify({"chain": chains}), 200
-
 
 @app.route('/delete_block/<int:index>', methods=['DELETE'])
 def delete_block(index):
     success = False
-    for node in NODES:
+    for node in check_active_nodes():
         try:
-            res = requests.delete(f"{node}/delete_block/{index}")
+            res = requests.delete(f"{node}/delete_block/{index}", headers=headers, verify=False)
             if res.status_code == 200:
                 success = True
         except:
             continue
-    if success:
-        return jsonify({"message": "Block marked as deleted."}), 200
-    else:
-        return jsonify({"error": "Block not found on any node."}), 404
+    return (jsonify({"message": "Block marked as deleted."}), 200) if success else (jsonify({"error": "Block not found"}), 404)
 
+# User-specific data endpoints
+
+def filter_chain(data_type, user_email, user_id):
+    chains, unique_hashes = [], set()
+    for node in check_active_nodes():
+        try:
+            res = requests.get(f"{node}/get_chain", headers=headers, verify=False).json()
+            for block in res['chain']:
+                if (block['hash'] not in unique_hashes and block['index'] != 0
+                        and block['data'].get("type") == data_type
+                        and block['data'].get("email") == user_email
+                        and block['data'].get("user_id") == user_id):
+                    unique_hashes.add(block['hash'])
+                    chains.append(block)
+        except:
+            continue
+    return sorted(chains, key=lambda x: x['index'])
 
 @app.route('/password-list', methods=['POST'])
 def password_list():
-    """Returns list of blocks where type is 'password' for a specific user."""
-    data = request.json
-    user_email = data.get("email")
-    user_id = data.get("user_id")
-
+    user_email, user_id = request.json.get("email"), request.json.get("user_id")
     if not user_email or not user_id:
         return jsonify({"error": "Missing email or user_id"}), 400
-
-    chains = []
-    unique_hashes = set()
-
-    for node in NODES:
-        try:
-            res = requests.get(f"{node}/get_chain").json()
-            for block in res['chain']:
-                if (block['hash'] not in unique_hashes 
-                    and block['index'] != 0  # Filter Genesis Block
-                    and block['data'].get("type") == "password"
-                    and block['data'].get("email") == user_email
-                    and block['data'].get("user_id") == user_id):
-                    
-                    unique_hashes.add(block['hash'])
-                    chains.append(block)
-        except:
-            continue
-
-    chains.sort(key=lambda x: x['index'])
-    return jsonify({"passwords": chains}), 200
-
+    passwords = filter_chain("password", user_email, user_id)
+    return jsonify({"passwords": passwords}), 200
 
 @app.route('/filedata-list', methods=['POST'])
 def filedata_list():
-    """Returns list of blocks where type is 'file' for a specific user."""
-    data = request.json
-    user_email = data.get("email")
-    user_id = data.get("user_id")
-
+    user_email, user_id = request.json.get("email"), request.json.get("user_id")
     if not user_email or not user_id:
         return jsonify({"error": "Missing email or user_id"}), 400
-
-    chains = []
-    unique_hashes = set()
-
-    for node in NODES:
-        try:
-            res = requests.get(f"{node}/get_chain").json()
-            for block in res['chain']:
-                if (block['hash'] not in unique_hashes 
-                    and block['index'] != 0  # Filter Genesis Block
-                    and block['data'].get("type") == "file"
-                    and block['data'].get("email") == user_email
-                    and block['data'].get("user_id") == user_id):
-                    
-                    unique_hashes.add(block['hash'])
-                    chains.append(block)
-        except:
-            continue
-
-    chains.sort(key=lambda x: x['index'])
-    return jsonify({"files": chains}), 200
+    files = filter_chain("file", user_email, user_id)
+    return jsonify({"files": files}), 200
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=False)

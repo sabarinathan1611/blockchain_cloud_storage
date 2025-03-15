@@ -12,3 +12,4 @@ pycryptodome
 python-dotenv
 psycopg2
 psutil
+flask_limiter
