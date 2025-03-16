@@ -199,30 +199,29 @@ def fileupload():
         except Exception as e:
             print(traceback.format_exc())
             flash(f"Encryption failed: {e}")
-            return redirect(url_for('view.fileupload'))
+        return redirect(url_for('view.decrypt_file'))
 
-    return redirect(url_for('view.home'))
+
 
 
 @view.route('/showfile')
 @login_required
 def decrypt_file():
-    user_files = current_user.files
     file_data_list = []
 
-    # Get the absolute path to the static folder
     static_folder = os.path.abspath(app.config['STATIC_FOLDER'])
     decrypt_folder = os.path.join(static_folder, 'Decrypt')
-    Filelist=api.list_data("filedata-list", user_id=current_user.id, user_email=aes_cipher.decrypt_data(current_user.email))
-    print(Filelist)
-    for db_file in user_files:
+
+    Filelist = api.list_data("filedata-list", user_id=current_user.id, user_email=aes_cipher.decrypt_data(current_user.email))
+
+    for file in Filelist.get('files', []):
         try:
-            # Decode file paths
-            file_path = b64decode(db_file.filepath).decode()
-            private_key_path = b64decode(db_file.private_key_path).decode()
-            public_key_path = b64decode(db_file.public_key_path).decode()
-            encrypted_key = db_file.encrypted_key
-            iv = db_file.iv
+            # Use paths directly (no base64 decode needed!)
+            file_path = file['data']['filepath']
+            private_key_path = file['data']['private_key_path']
+            public_key_path = file['data']['public_key_path']
+            encrypted_key = base64.b64decode(file['data']['encrypted_key'])
+            iv = base64.b64decode(file['data']['iv'])
             salt = current_user.salt
 
             # Read encrypted file
@@ -245,21 +244,14 @@ def decrypt_file():
             # Save decrypted file
             with open(decrypted_filepath, 'wb') as f:
                 f.write(decrypted_data)
-            
-            # Update database status
-            db_file.status = "Decrypted"
-            db.session.commit()
-            filee=b64decode(db_file.filename).decode()
-            print("filee ",filee)
-            # Generate URL - create path relative to static folder
-            relative_path = os.path.relpath(decrypted_filepath, static_folder)
-            relative_path = relative_path.replace('\\', '/')  # Convert Windows paths to URL format
-            
-            # Store file info for display
+
+            filee = file['data']['filename']
+            relative_path = os.path.relpath(decrypted_filepath, static_folder).replace('\\', '/')
+
             file_data_list.append({
                 'file_path': url_for('static', filename=relative_path),
-                "filename":filee,
-                'mimetype': b64decode(db_file.mimetype).decode()
+                'filename': filee,
+                'mimetype': file['data']['mimetype']
             })
 
         except Exception as e:
@@ -268,7 +260,6 @@ def decrypt_file():
             continue
 
     return render_template('decrypted_file.html', file_data_list=file_data_list)
-
 
 @view.route('/profile', methods=['POST'])
 @login_required

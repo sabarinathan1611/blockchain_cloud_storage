@@ -46,7 +46,7 @@ class APIManager:
     def add_file_data(self, data_type, user_id, user_email, filename, filepath, private_key_path, public_key_path, mimetype, iv, encrypted_key):
         payload = {
             "data": {
-                "data_type": data_type,
+                "type": data_type,
                 "user_id": user_id,
                 "user_email": user_email,
                 "filename": filename,
@@ -58,6 +58,7 @@ class APIManager:
                 "encrypted_key": encrypted_key,
             }
         }
+        print("EMail : ",user_email,"\n","ID",user_id)
 
         for key, value in payload["data"].items():
             if isinstance(value, bytes):

@@ -90,7 +90,10 @@ def filter_chain(data_type, user_email, user_id):
             for block in res['chain']:
                 
                 block_data = block.get('data', {})
-                print(block_data)
+                print("TYPE: ",block_data.get("type")==data_type)
+                print("user_email: ",block_data.get("user_email")==user_email)
+                print("user_id: ",block_data.get("user_id")==user_id)
+                
                 
                 if (
                     block['hash'] not in unique_hashes
@@ -107,6 +110,38 @@ def filter_chain(data_type, user_email, user_id):
     return sorted(chains, key=lambda x: x['index'])
 
 
+def filter_file_chain(data_type, user_email, user_id):
+    chains, unique_hashes = [], set()
+    for node in check_active_nodes():
+        try:
+            res = requests.get(f"{node}/get_chain", headers=headers, verify=False).json()
+            for block in res['chain']:
+                
+                block_data = block.get('data', {})
+                # print("TYPE: ",block_data.get("type")==data_type)
+                # print("user_email: ",block_data.get("user_email")==user_email)
+                # print("user_id: ",block_data.get("user_id")==user_id)
+                
+                if block_data.get("type")==data_type:
+                       print("user_email: ",block_data.get("user_email"))
+                       print("user_id: ",block_data.get("user_id"))
+                if (
+                    block['hash'] not in unique_hashes
+                    and block['index'] != 0
+                    and block_data.get("type") == data_type
+                    and block_data.get("user_email") == user_email
+                    and block_data.get("user_id") == user_id
+                ):
+                    unique_hashes.add(block['hash'])
+                    chains.append(block)
+        except Exception as e:
+            print(f"Error fetching from node {node}: {e}")
+            continue
+    return sorted(chains, key=lambda x: x['index'])
+
+
+
+
 @app.route('/password-list', methods=['POST'])
 def password_list():
     user_email, user_id = request.json.get("email"), request.json.get("user_id")
@@ -121,7 +156,7 @@ def filedata_list():
     user_email, user_id = request.json.get("email"), request.json.get("user_id")
     if not user_email or not user_id:
         return jsonify({"error": "Missing email or user_id"}), 400
-    files = filter_chain("file", user_email, user_id)
+    files = filter_file_chain("file", user_email, user_id)
     return jsonify({"files": files}), 200
 
 if __name__ == '__main__':
