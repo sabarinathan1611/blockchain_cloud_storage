@@ -10,12 +10,12 @@ from Crypto.Random import get_random_bytes
 class Text(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    encrypted_Key = db.Column(db.LargeBinary, nullable=False)  # should be bytes
-    nonce = db.Column(db.LargeBinary, nullable=False)  # should be bytes
-    ciphertext = db.Column(db.LargeBinary, nullable=False)  # should be bytes
-    private_key_path = db.Column(db.LargeBinary, nullable=False)  # should be bytes
-    public_key_path = db.Column(db.LargeBinary, nullable=False)  # should be bytes
-    store_type = db.Column(db.LargeBinary, nullable=False)  # should be bytes
+    encrypted_Key = db.Column(db.LargeBinary, nullable=False)  
+    nonce = db.Column(db.LargeBinary, nullable=False)  
+    ciphertext = db.Column(db.LargeBinary, nullable=False)  
+    private_key_path = db.Column(db.LargeBinary, nullable=False)  
+    public_key_path = db.Column(db.LargeBinary, nullable=False)  
+    store_type = db.Column(db.LargeBinary, nullable=False)  
     date = db.Column(db.DateTime, default=datetime.utcnow)
 
 

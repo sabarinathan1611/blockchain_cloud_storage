@@ -88,21 +88,31 @@ def filter_chain(data_type, user_email, user_id):
         try:
             res = requests.get(f"{node}/get_chain", headers=headers, verify=False).json()
             for block in res['chain']:
-                if (block['hash'] not in unique_hashes and block['index'] != 0
-                        and block['data'].get("type") == data_type
-                        and block['data'].get("email") == user_email
-                        and block['data'].get("user_id") == user_id):
+                
+                block_data = block.get('data', {})
+                print(block_data)
+                
+                if (
+                    block['hash'] not in unique_hashes
+                    and block['index'] != 0
+                    and block_data.get("type") == data_type
+                    and block_data.get("user_email") == user_email
+                    and block_data.get("user_id") == user_id
+                ):
                     unique_hashes.add(block['hash'])
                     chains.append(block)
-        except:
+        except Exception as e:
+            print(f"Error fetching from node {node}: {e}")
             continue
     return sorted(chains, key=lambda x: x['index'])
+
 
 @app.route('/password-list', methods=['POST'])
 def password_list():
     user_email, user_id = request.json.get("email"), request.json.get("user_id")
     if not user_email or not user_id:
         return jsonify({"error": "Missing email or user_id"}), 400
+    print("EMAIL:",user_email,"\n","ID",user_id)
     passwords = filter_chain("password", user_email, user_id)
     return jsonify({"passwords": passwords}), 200
 
@@ -115,4 +125,4 @@ def filedata_list():
     return jsonify({"files": files}), 200
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=False)
+    app.run(host='0.0.0.0', port=5000, debug=True)

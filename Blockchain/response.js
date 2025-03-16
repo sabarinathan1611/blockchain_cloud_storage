@@ -1,0 +1,1 @@
+{'files': [{'data': {'content': {'filehash': 'abcdef123456', 'filename': 'document.pdf'}, 'email': 'user@example.com', 'type': 'file', 'user_id': '12345'}, 'deleted': False, 'hash': 'd47fd264afa2b61e7ba05de02ace6ab54afdb4fb44b3d865e2f6a7bd908957c0', 'index': 2, 'previous_hash': '7799cf1b3cffea1892fef912e18a10610bfaa345cf85c830ed9237853a4ed211', 'timestamp': 1742133599.9525344}]}

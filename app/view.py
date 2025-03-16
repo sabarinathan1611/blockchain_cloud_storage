@@ -11,6 +11,7 @@ from flask  import current_app as app
 from .utils.Encryption.TextEncryption import text_encryption,text_decryption
 from .utils.Encryption.dataencryption import AESCipher 
 
+from .API.API import APIManager
 # from .utils.config import Config
 import os
 from werkzeug.utils import secure_filename
@@ -24,7 +25,7 @@ from base64 import b64decode, b64encode
 
 view = Blueprint('view', __name__)
 
-
+api =APIManager()
 
 
 
@@ -90,11 +91,11 @@ def store_pass():
 
         encrypted_session_key, iv, ciphertext = text_encryption(public_key_path, private_key_path, string, salt=session.get('salt'))
         
-        stype = aes_cipher.encrypt_data("password")
-        
-        newtext = Text(user_id=current_user.id, encrypted_Key=encrypted_session_key, nonce=iv, ciphertext=ciphertext, private_key_path=encrypted_private, public_key_path=encrypted_public, store_type=stype)
-        db.session.add(newtext)
-        db.session.commit()
+        newtext=api.add_password_data(user_id=current_user.id,user_email=aes_cipher.decrypt_data(current_user.email) ,encrypted_key=encrypted_session_key, iv=iv, ciphertext=ciphertext, private_key_path=encrypted_private, public_key_path=encrypted_public, data_type="password")
+        print(newtext)
+        # newtext = Text(user_id=current_user.id, encrypted_Key=encrypted_session_key, nonce=iv, ciphertext=ciphertext, private_key_path=encrypted_private, public_key_path=encrypted_public, store_type=stype)
+        # db.session.add(newtext)
+        # db.session.commit()
     
     return redirect(url_for('view.home'))
 
@@ -103,26 +104,38 @@ def store_pass():
 def showpass():
     form = EditPasswordForm()
     if current_user.is_authenticated:
-        passwords = Text.query.filter_by(user_id=current_user.id)
+        
+        passwordLists = api.list_data("password-list", user_id=current_user.id, user_email=aes_cipher.decrypt_data(current_user.email))
+
         data = []
-        # decryption_ = CryptoKyber()
-        for password in passwords:
-            decrypted_public_key_path = aes_cipher.decrypt_data(password.public_key_path)  # Assuming it's bytes
-            decrypted_private_key_path = aes_cipher.decrypt_data(password.private_key_path)  # Assuming it's bytes
+        for password_entry in passwordLists.get('passwords', []):
+            # Decode from Base64 to original bytes
+            encrypted_key = base64.b64decode(password_entry['data']['encrypted_Key'])
+            iv = base64.b64decode(password_entry['data']['iv'])
+            ciphertext = base64.b64decode(password_entry['data']['ciphertext'])
             
+            # Decrypt private and public key paths
+            private_key_path = aes_cipher.decrypt_data(base64.b64decode(password_entry['data']['private_key_path']))
+            public_key_path = aes_cipher.decrypt_data(base64.b64decode(password_entry['data']['public_key_path']))
             
-            decrypted_message=text_decryption(encrypted_key=password.encrypted_Key, iv=password.nonce, ciphertext=password.ciphertext, salt=session.get('salt'), public_key_path=decrypted_public_key_path, private_key_path=decrypted_private_key_path)
+            decrypted_message = text_decryption(
+                encrypted_key=encrypted_key,
+                iv=iv,
+                ciphertext=ciphertext,
+                salt=session.get('salt'),
+                public_key_path=public_key_path,
+                private_key_path=private_key_path
+            )
             
             data.append({
-                "id": password.id,
+                "id": current_user.id,
                 "data": string_to_dict(decrypted_message),
-                "store_type": aes_cipher.decrypt_data(password.store_type)
+                "store_type": password_entry['data']['type']
             })
 
         return render_template('passwords.html', data=data, form=form)
     else:
         return redirect(url_for('view.home'))
-
 
 # def ensure_keys(public_key_path, private_key_path):
 #     if not os.path.exists(public_key_path) or not os.path.exists(private_key_path):
@@ -177,7 +190,9 @@ def fileupload():
                 iv=iv,  # Already bytes
                 encrypted_key=encrypted_key  # Already bytes
             )
-            
+            # newtext=api.add_password_data(user_id=current_user.id,user_email=aes_cipher.decrypt_data(current_user.email) ,encrypted_key=encrypted_session_key, iv=iv, ciphertext=ciphertext, private_key_path=encrypted_private, public_key_path=encrypted_public, data_type="password")
+            newfile=api.add_file_data(data_type="file", user_id=current_user.id, user_email=aes_cipher.decrypt_data(current_user.email), filename=filename, filepath=filepath, private_key_path=private_key_path, public_key_path=public_key_path, mimetype=filemimetype, iv=iv, encrypted_key=encrypted_key)
+            print(newfile)
             db.session.add(addnew)
             db.session.commit()
 
@@ -198,7 +213,8 @@ def decrypt_file():
     # Get the absolute path to the static folder
     static_folder = os.path.abspath(app.config['STATIC_FOLDER'])
     decrypt_folder = os.path.join(static_folder, 'Decrypt')
-
+    Filelist=api.list_data("filedata-list", user_id=current_user.id, user_email=aes_cipher.decrypt_data(current_user.email))
+    print(Filelist)
     for db_file in user_files:
         try:
             # Decode file paths
